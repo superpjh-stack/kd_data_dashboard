@@ -1,0 +1,12 @@
+services:
+  dashboard:
+    build: .
+    ports: ["8021:8021"]
+    environment:
+      KYUNGDONG_DATA_ROOT: /data
+      KYUNGDONG_DB_PATH: /runtime/kyungdong.sqlite3
+    volumes:
+      - ${KYUNGDONG_DATA_ROOT:?set KYUNGDONG_DATA_ROOT}:/data:ro
+      - dashboard-runtime:/runtime
+volumes:
+  dashboard-runtime:

@@ -1,0 +1,11 @@
+.venv/
+node_modules/
+web/dist/
+*.tsbuildinfo
+web/vite.config.js
+web/vite.config.d.ts
+.runtime/
+__pycache__/
+*.pyc
+.DS_Store
+.env
