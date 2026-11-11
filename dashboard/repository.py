@@ -163,9 +163,21 @@ class Repository:
                 """SELECT customer_candidate customer,COUNT(*) projects,SUM(file_count) files,SUM(total_bytes) bytes
                 FROM manufacturing_projects GROUP BY customer_candidate ORDER BY projects DESC,files DESC LIMIT 30"""
             ))
+            quality = {
+                "unclassified": con.execute("SELECT COUNT(*) FROM manufacturing_files WHERE exists_flag=1 AND project_code IS NULL").fetchone()[0],
+                "isolated": con.execute("SELECT COUNT(*) FROM manufacturing_files WHERE exists_flag=1 AND open_allowed=0").fetchone()[0],
+                "missing": con.execute("SELECT COUNT(*) FROM manufacturing_files WHERE exists_flag=0").fetchone()[0],
+                "errors": con.execute("SELECT COUNT(*) FROM scan_errors").fetchone()[0],
+            }
+            top_projects = self.rows(con.execute(
+                """SELECT COALESCE(project_code,'미분류') project_code,COUNT(*) files,
+                COALESCE(equipment_type,'기타') equipment FROM manufacturing_files
+                WHERE exists_flag=1 GROUP BY project_code,equipment_type ORDER BY files DESC LIMIT 12"""
+            ))
         return {"files": total[0], "bytes": total[1], "projects": total[2], "by_year": by_year,
                 "by_type": by_type, "equipment": equipment, "customers": customers,
-                "customers_count": sum(1 for row in customers if row["customer"] != "미분류")}
+                "customers_count": sum(1 for row in customers if row["customer"] != "미분류"),
+                "quality": quality, "top_projects": top_projects}
 
     def portfolio_customers(self) -> list[dict[str, Any]]:
         with self.connect() as con:

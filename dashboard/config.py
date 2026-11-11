@@ -18,7 +18,14 @@ def reactor_root(root: Path | None = None) -> Path:
     configured = os.getenv("KYUNGDONG_REACTOR_ROOT", "").strip()
     base = (root or data_root()).resolve()
     direct = base / "bom/data/cases_pipeline.json"
-    candidate = Path(configured).expanduser().resolve() if configured else (base if direct.is_file() else base / "반응기_리포지토리")
+    if configured:
+        candidate = Path(configured).expanduser().resolve()
+    elif direct.is_file():
+        candidate = base
+    else:
+        candidates = [base / "반응기_리포지토리", base / "20261003 자료" / "반응기_리포지토리"]
+        candidates.extend(sorted(base.glob("*/반응기_리포지토리")))
+        candidate = next((path for path in candidates if (path / "bom/data/cases_pipeline.json").is_file()), candidates[0])
     candidate = candidate.resolve()
     required = [candidate / "bom/data/cases_pipeline.json", candidate / "index/files.csv", candidate / "index/quotes.csv"]
     missing = [str(path) for path in required if not path.is_file()]

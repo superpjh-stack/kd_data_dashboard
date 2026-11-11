@@ -7,6 +7,7 @@ from dashboard.scanner import scan_files
 
 def test_classifier_extracts_project_and_safety():
     assert project_codes("26 경동도면함/KD2600-18 유엠씨 반응기/도면.dwg") == ["KD2600-18"]
+    assert project_codes("19 경동도면함/GD1904-웰이엔씨/도면.dwg") == ["GD1904"]
     assert equipment_type("300L REACTOR 제작도")[0] == "반응기"
     assert file_class(Path("setup.exe")) == ("격리", False)
     assert file_class(Path("drawing.dwg")) == ("도면·CAD", True)

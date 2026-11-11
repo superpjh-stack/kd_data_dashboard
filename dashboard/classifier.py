@@ -5,7 +5,7 @@ import unicodedata
 from pathlib import Path
 
 
-PROJECT_CODE = re.compile(r"\b(?:KD|GD)\s*[-_]?\s*(?:25|26)\d{2}(?:\s*[-_]\s*\d{1,2})?\b", re.I)
+PROJECT_CODE = re.compile(r"\b(?:KD|GD)\s*[-_]?\s*\d{4}(?:\s*[-_]\s*\d{1,2})?\b", re.I)
 
 RISKY_EXTENSIONS = {".exe", ".dll", ".cab", ".ocx", ".tlb", ".com", ".bat"}
 TEMP_EXTENSIONS = {".bak", ".tmp", ".dwl", ".dwl2", ".log", ".crdownload"}
@@ -13,6 +13,7 @@ MEDIA_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".avif", ".mp4", ".wmv"}
 CAD_EXTENSIONS = {".dwg", ".cad", ".dxf", ".step", ".stp", ".ipt", ".iam", ".sldprt", ".sldasm", ".x_t", ".sat", ".igs"}
 SHEET_EXTENSIONS = {".xlsx", ".xls", ".xlsm", ".csv"}
 DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".doc", ".hwp", ".hwpx", ".pptx", ".ppt", ".eml", ".txt"}
+ARCHIVE_EXTENSIONS = {".zip", ".7z", ".rar", ".tar", ".gz"}
 
 EQUIPMENT_TERMS = {
     "반응기": ("반응기", "reactor"),
@@ -79,13 +80,16 @@ def file_class(path: Path) -> tuple[str, bool]:
         return "스프레드시트", True
     if ext in DOCUMENT_EXTENSIONS:
         return "문서", True
+    if ext in ARCHIVE_EXTENSIONS:
+        return "압축파일", True
     return "기타", True
 
 
 def source_year(relative_path: Path) -> int | None:
-    top = normalized(relative_path.parts[0]) if relative_path.parts else ""
-    if top.startswith("25 "):
-        return 2025
-    if top.startswith("26 "):
-        return 2026
+    for part in relative_path.parts[:3]:
+        match = re.match(r"^(\d{2})\s", normalized(part))
+        if match:
+            year = int(match.group(1))
+            if 0 <= year <= 99:
+                return 2000 + year
     return None

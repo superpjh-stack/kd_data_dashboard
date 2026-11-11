@@ -59,3 +59,15 @@ def test_portfolio_and_analytics_endpoints(tmp_path: Path):
         report = client.get("/api/analytics/ml-readiness").json()
         assert report["model_published"] is False
         assert report["tasks"]["quote_range"]["ready"] is False
+
+
+def test_golden_dataset_endpoint_returns_auditable_seed(tmp_path: Path):
+    root = fixture(tmp_path)
+    with TestClient(create_app(root, tmp_path / "test.sqlite3")) as client:
+        response = client.get("/api/analytics/golden-dataset")
+        assert response.status_code == 200
+        payload = response.json()
+        assert payload["status"] == "seed_only"
+        assert payload["schema"]["cad_object"]
+        assert payload["samples"]
+        assert "evidence" in payload["samples"][0]

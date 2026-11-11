@@ -1,16 +1,18 @@
 from __future__ import annotations
 
+import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import data_root, db_path, reactor_root
 from .importer import rebuild_database
 from .repository import Repository
-from .analytics import eda, ml_readiness, similar_projects
+from .analytics import eda, golden_dataset, ml_readiness, similar_projects
+from . import foundation
 
 
 def create_app(root: Path | None = None, db: Path | None = None) -> FastAPI:
@@ -22,10 +24,30 @@ def create_app(root: Path | None = None, db: Path | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         rebuild_database(reactor, database, source)
+        foundation.ensure_schema(database)
         yield
 
     app = FastAPI(title="경동글로벌텍 반응기 데이터 대시보드", version="0.1.0", lifespan=lifespan)
     app.state.repo = repo
+
+    @app.get("/api/foundation/summary")
+    def foundation_summary():
+        return foundation.summary(database)
+
+    @app.get("/api/foundation/records")
+    def foundation_records(sheet: str = "", q: str = "", issues_only: bool = False,
+                           offset: int = 0, limit: int = 100):
+        if limit < 1 or limit > 500 or offset < 0:
+            raise HTTPException(422, "limit은 1~500, offset은 0 이상이어야 합니다.")
+        return foundation.records(database, sheet, q, issues_only, offset, limit)
+
+    @app.get("/api/foundation/source")
+    def foundation_source():
+        path = foundation.snapshot_path(database)
+        if path is None:
+            raise HTTPException(404, "적재한 원본이 없습니다.")
+        info = foundation.summary(database)["source"]
+        return FileResponse(path, filename=info["filename"])
 
     @app.get("/api/health")
     def health():
@@ -96,6 +118,15 @@ def create_app(root: Path | None = None, db: Path | None = None) -> FastAPI:
     @app.get("/api/analytics/ml-readiness")
     def analytics_ml_readiness():
         return ml_readiness(repo)
+
+    @app.get("/api/analytics/golden-dataset")
+    def analytics_golden_dataset():
+        payload = golden_dataset(repo)
+        return Response(
+            content=json.dumps(payload, ensure_ascii=False, indent=2),
+            media_type="application/json",
+            headers={"Content-Disposition": 'attachment; filename="kyungdong-golden-dataset-sample.json"'},
+        )
 
     @app.get("/api/analytics/similar-projects")
     def analytics_similar_projects(project_id: str):

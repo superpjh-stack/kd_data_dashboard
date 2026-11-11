@@ -1,7 +1,7 @@
 #!/bin/zsh
 set -e
 cd "${0:A:h}"
-DEFAULT_DATA_ROOT='/Users/gerardo92/Desktop/01 경동글로벌텍 제조AI 플랫폼 구축 프로젝트/01 경동Data/20261003 자료'
+DEFAULT_DATA_ROOT='/Users/gerardo92/Desktop/01 경동글로벌텍 제조AI 플랫폼 구축 프로젝트/01 경동Data'
 export KYUNGDONG_DATA_ROOT="${KYUNGDONG_DATA_ROOT:-$DEFAULT_DATA_ROOT}"
 if [[ ! -d "$KYUNGDONG_DATA_ROOT" ]]; then
   echo "반응기_리포지토리 경로를 찾을 수 없습니다:"
