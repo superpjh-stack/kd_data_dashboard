@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 import os
+import unicodedata
 from pathlib import Path
+
+
+def selected_sources(root: Path) -> list[Path]:
+    """The explicit drawing-folder collection takes precedence over legacy indexes."""
+    names = {f"{year}년 도면함" for year in range(19, 27)}
+    children = {unicodedata.normalize("NFC", p.name): p for p in root.iterdir()}
+    if not any(name in children for name in names):
+        return []
+    names.add("경동글로벌텍_기초데이터_입력양식_v1.5.xlsx")
+    return [children[name] for name in sorted(names) if name in children]
 
 
 def data_root() -> Path:
@@ -17,6 +28,8 @@ def data_root() -> Path:
 def reactor_root(root: Path | None = None) -> Path:
     configured = os.getenv("KYUNGDONG_REACTOR_ROOT", "").strip()
     base = (root or data_root()).resolve()
+    if selected_sources(base):
+        return base
     direct = base / "bom/data/cases_pipeline.json"
     if configured:
         candidate = Path(configured).expanduser().resolve()

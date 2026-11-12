@@ -23,6 +23,9 @@ class Repository:
 
     def summary(self) -> dict[str, Any]:
         with self.connect() as con:
+            mode = con.execute("SELECT value FROM meta WHERE key='dataset_mode'").fetchone()
+            if mode and mode[0] == 'selected_drawings':
+                return {'dataset_mode': 'selected_drawings', 'kpis': {'order_amount': None, 'quote_amount': None, 'ordered_projects': 0, 'customers': 0, 'conversion_rate': None}, 'timeline': [], 'projects': [], 'rules': ['확정 수주·정제 견적은 아직 없음. 입력양식 견적은 별도 검수 후보입니다.']}
             projects = self.rows(con.execute("SELECT * FROM projects ORDER BY id"))
             valid_quotes = self.rows(con.execute(
                 "SELECT * FROM quotes WHERE relevant=1 AND issuer LIKE '%경동 발행%' AND project_id <> 'R12' AND total_amount IS NOT NULL"

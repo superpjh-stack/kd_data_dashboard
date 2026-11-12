@@ -27,7 +27,7 @@ def create_app(root: Path | None = None, db: Path | None = None) -> FastAPI:
         foundation.ensure_schema(database)
         yield
 
-    app = FastAPI(title="경동글로벌텍 반응기 데이터 대시보드", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="경동글로벌텍 제조 데이터 대시보드", version="0.1.0", lifespan=lifespan)
     app.state.repo = repo
 
     @app.get("/api/foundation/summary")

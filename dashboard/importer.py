@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .scanner import scan_files
+from .config import selected_sources
 
 
 SCHEMA = """
@@ -43,6 +44,21 @@ def _integer(value: Any) -> int | None:
 
 
 def rebuild_database(root: Path, db: Path, portfolio_root: Path | None = None) -> dict[str, int]:
+    selected = selected_sources(portfolio_root or root)
+    if selected:
+        from .foundation import import_workbook
+        with sqlite3.connect(db) as con:
+            con.executescript(SCHEMA)
+            for table in ("projects", "quotes", "files"):
+                con.execute(f"DELETE FROM {table}")
+            con.execute("INSERT OR REPLACE INTO meta VALUES('dataset_mode','selected_drawings')")
+            con.execute("INSERT OR REPLACE INTO meta VALUES('data_root',?)", (str(root),))
+            con.execute("INSERT OR REPLACE INTO meta VALUES('project_count','0')")
+        result = scan_files(portfolio_root or root, db, compute_hashes=True)
+        for path in selected:
+            if path.suffix.lower() == ".xlsx":
+                import_workbook(path, db)
+        return {"projects": 0, "quotes": 0, "files": 0, "manufacturing_files": result["scanned"], "errors": result["errors"]}
     cases = json.loads((root / "bom/data/cases_pipeline.json").read_text(encoding="utf-8-sig"))
     connection = sqlite3.connect(db)
     try:
@@ -80,6 +96,7 @@ def rebuild_database(root: Path, db: Path, portfolio_root: Path | None = None) -
                      row["md5"], row["본문텍스트"]),
                 )
         connection.execute("INSERT OR REPLACE INTO meta VALUES('data_root', ?)", (str(root),))
+        connection.execute("INSERT OR REPLACE INTO meta VALUES('dataset_mode', 'legacy_reactor')")
         connection.execute("INSERT OR REPLACE INTO meta VALUES('project_count', ?)", (str(len(cases)),))
         connection.commit()
         result = {

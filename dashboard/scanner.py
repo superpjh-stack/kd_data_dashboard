@@ -4,6 +4,8 @@ import hashlib
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
+from itertools import chain
+from .config import selected_sources
 
 from .classifier import customer_candidate, equipment_type, file_class, normalized, project_codes, project_label, source_year
 
@@ -61,7 +63,9 @@ def scan_files(root: Path, db: Path, compute_hashes: bool = False) -> dict[str, 
         run_id = con.execute("INSERT INTO ingestion_runs(started_at,status) VALUES(?,?)", (now, "running")).lastrowid
         con.execute("UPDATE manufacturing_files SET exists_flag=0")
         scanned = changed = errors = 0
-        for path in root.rglob("*"):
+        selected = selected_sources(root)
+        paths = chain.from_iterable(p.rglob("*") if p.is_dir() else [p] for p in selected) if selected else root.rglob("*")
+        for path in paths:
             if not path.is_file():
                 continue
             scanned += 1
@@ -74,7 +78,9 @@ def scan_files(root: Path, db: Path, compute_hashes: bool = False) -> dict[str, 
                 classification, open_allowed = file_class(path)
                 codes = project_codes(relative_text)
                 equipment, confidence = equipment_type(relative_text)
-                digest = _sha256(path) if compute_hashes and is_changed else (old[2] if old else None)
+                digest = old[2] if old and not is_changed else None
+                if compute_hashes and not digest:
+                    digest = _sha256(path)
                 con.execute(
                     """INSERT INTO manufacturing_files(relative_path,filename,extension,size,modified_ns,source_year,
                     project_code,equipment_type,classification,open_allowed,sha256,exists_flag,classification_confidence,last_run_id)
@@ -82,7 +88,7 @@ def scan_files(root: Path, db: Path, compute_hashes: bool = False) -> dict[str, 
                     filename=excluded.filename,extension=excluded.extension,size=excluded.size,modified_ns=excluded.modified_ns,
                     source_year=excluded.source_year,project_code=excluded.project_code,equipment_type=excluded.equipment_type,
                     classification=excluded.classification,open_allowed=excluded.open_allowed,
-                    sha256=COALESCE(excluded.sha256,manufacturing_files.sha256),exists_flag=1,
+                    sha256=excluded.sha256,exists_flag=1,
                     classification_confidence=excluded.classification_confidence,last_run_id=excluded.last_run_id""",
                     (relative_text, normalized(path.name), path.suffix.casefold(), stat.st_size, stat.st_mtime_ns,
                      source_year(relative), codes[0] if codes else None, equipment, classification, int(open_allowed),

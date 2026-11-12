@@ -5,9 +5,12 @@ from pathlib import Path
 from typing import Any
 
 from .repository import Repository
+from . import selected_analytics
 
 
 def eda(repo: Repository) -> dict[str, Any]:
+    if selected_analytics.active(repo):
+        return selected_analytics.eda(repo)
     summary = repo.summary()
     projects = summary["projects"]
     reactor_projects = [p for p in projects if p["id"].startswith("R")]
@@ -38,6 +41,8 @@ def eda(repo: Repository) -> dict[str, Any]:
 
 
 def ml_readiness(repo: Repository) -> dict[str, Any]:
+    if selected_analytics.active(repo):
+        return selected_analytics.readiness(repo)
     report = eda(repo)
     samples = report["samples"]
     regression_ready = samples["known_order_amount"] >= 30
@@ -76,6 +81,8 @@ def _first_number(value: str | None) -> int | float | None:
 
 def golden_dataset(repo: Repository) -> dict[str, Any]:
     """Build an auditable seed dataset from existing structured extracts."""
+    if selected_analytics.active(repo):
+        return selected_analytics.golden(repo)
     status_rows = _csv_rows(repo.root, "drawings_status.csv")
     design_rows = _csv_rows(repo.root, "drawing_design_data.csv")
     part_rows = _csv_rows(repo.root, "drawing_parts.csv")

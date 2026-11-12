@@ -87,7 +87,7 @@ def file_class(path: Path) -> tuple[str, bool]:
 
 def source_year(relative_path: Path) -> int | None:
     for part in relative_path.parts[:3]:
-        match = re.match(r"^(\d{2})\s", normalized(part))
+        match = re.match(r"^(\d{2})(?:년\s|\s)", normalized(part))
         if match:
             year = int(match.group(1))
             if 0 <= year <= 99:
